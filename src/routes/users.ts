@@ -4,39 +4,36 @@ import mysql from "mysql2";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 const router = Router();
-
 const pool = mysql
   .createPool({
     host: "localhost",
     user: "root",
     database: "mt_mysql_db",
-    password: "secretpassword",
+    password: "secretpassword?",
     connectionLimit: 100,
   })
   .promise();
 
-router.get("/", async (_req, res) => {
+router.get("/", async (request, response) => {
   const connection = await pool.getConnection();
   try {
     const [rows] = await connection.query("SELECT * FROM users");
     const users = rows || [];
-    res.status(200).json(users);
+    return response.status(200).json(users);
   } catch (error) {
     console.log(error);
-    res.status(500).json({
-      message: error instanceof Error ? error.message : "Internal Server Error",
-    });
+    return response.status(500).send(error.message);
   } finally {
     connection.release();
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (request, response) => {
   const connection = await pool.getConnection();
   try {
-    const { id } = req.params;
+    const { id } = request.params;
     if (!id) {
-      return res.status(400).json({ message: "Bad Request" });
+      return response.status(400).json({ message: "Bad Request" });
     }
 
     const [rows] = (await connection.query("SELECT * FROM users WHERE id = ?", [
@@ -45,12 +42,12 @@ router.get("/:id", async (req, res) => {
 
     const user = rows[0];
     if (!user) {
-      return res.status(404).json({ message: "Not Found" });
+      return response.status(404).json({ message: "Not Found" });
     }
-    res.status(200).json(user);
+    response.status(200).json(user);
   } catch (error) {
     console.log(error);
-    res.status(500).json({
+    response.status(500).json({
       message: error instanceof Error ? error.message : "Internal Server Error",
     });
   } finally {
@@ -58,12 +55,12 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", async (request, response) => {
   const connection = await pool.getConnection();
   try {
-    const { name, email } = req.body;
+    const { name, email } = request.body;
     if (!name || !email) {
-      return res.status(400).json({ message: "Bad Request" });
+      return response.status(400).json({ message: "Bad Request" });
     }
 
     const [results] = (await connection.query(
@@ -71,10 +68,10 @@ router.post("/", async (req, res) => {
       [name, email]
     )) as ResultSetHeader[];
 
-    res.status(201).json({ id: results.insertId, ...req.body });
+    response.status(201).json({ id: results.insertId, ...request.body });
   } catch (error) {
     console.log(error);
-    res.status(500).json({
+    response.status(500).json({
       message: error instanceof Error ? error.message : "Internal Server Error",
     });
   } finally {
@@ -82,27 +79,27 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", async (request, response) => {
   const connection = await pool.getConnection();
   try {
-    const { email } = req.body;
-    const { id } = req.params;
-    if (!id || !email) {
-      return res.status(400).json({ message: "Bad Request" });
+    const { name } = request.body;
+    const { id } = request.params;
+    if (!id || !name) {
+      return response.status(400).json({ message: "Missing id or name" });
     }
 
     const [results] = (await connection.query(
-      "UPDATE users SET email = ? WHERE id = ?",
-      [email, id]
+      "UPDATE users SET name = ? WHERE id = ?",
+      [name, id]
     )) as ResultSetHeader[];
 
     if (results.affectedRows === 0) {
-      return res.status(404).json({ message: "Not Found" });
+      return response.status(404).json({ message: "Not Found" });
     }
-    res.status(200).json({ id: req.params.id, ...req.body });
+    response.status(200).json({ id: request.params.id, ...request.body });
   } catch (error) {
     console.log(error);
-    res.status(500).json({
+    response.status(500).json({
       message: error instanceof Error ? error.message : "Internal Server Error",
     });
   } finally {
@@ -110,20 +107,20 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", async (request, response) => {
   const connection = await pool.getConnection();
   try {
-    const { id } = req.params;
+    const { id } = request.params;
     if (!id) {
-      return res.status(400).json({ message: "Bad Request" });
+      return response.status(400).json({ message: "Bad Request" });
     }
 
     await connection.query("DELETE FROM users WHERE id = ?", [id]);
 
-    res.status(204).send();
+    response.status(204).send();
   } catch (error) {
     console.log(error);
-    res.status(500).json({
+    response.status(500).json({
       message: error instanceof Error ? error.message : "Internal Server Error",
     });
   } finally {
