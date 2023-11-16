@@ -9,7 +9,7 @@ const pool = mysql
     host: "localhost",
     user: "root",
     database: "mt_mysql_db",
-    password: "secretpassword?",
+    password: "secretpassword",
     connectionLimit: 100,
   })
   .promise();
